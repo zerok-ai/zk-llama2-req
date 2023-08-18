@@ -23,7 +23,7 @@ data "google_client_config" "default" {
 
 # Defer reading the cluster data until the GKE cluster exists.
 data "google_container_cluster" "default" {
-  name       = "gpu-cluster"
+  name       = "zk-llm-cluster"
   depends_on = [module.gke-cluster]
   location   = var.region
 }
@@ -39,7 +39,7 @@ provider "kubernetes" {
 resource "kubernetes_deployment" "falcon7b" {
   count = var.model == "falcon7b" ? 1 : 0
   metadata {
-    name = "falcon7b"
+    name = "zk-falcon7b"
     labels = {
       app = "falcon7b"
     }
@@ -78,7 +78,7 @@ resource "kubernetes_deployment" "falcon7b" {
 resource "kubernetes_service" "falcon7b_service" {
   count = var.model == "falcon7b" ? 1 : 0
   metadata {
-    name      = "falcon7b-service"
+    name      = "zk-falcon7b-service"
     namespace = "default"
   }
 
@@ -99,7 +99,7 @@ resource "kubernetes_service" "falcon7b_service" {
 resource "kubernetes_deployment" "llama2_7b" {
   count = var.model == "llama2-7b" ? 1 : 0
   metadata {
-    name = "llama2-7b"
+    name = "zk-llama2-7b"
     labels = {
       app = "llama2-7b"
     }
@@ -142,7 +142,7 @@ resource "kubernetes_deployment" "llama2_7b" {
 resource "kubernetes_service" "llama2_7b_service" {
   count = var.model == "llama2-7b" ? 1 : 0
   metadata {
-    name      = "llama2-7b-service"
+    name      = "zk-llama2-7b-service"
     namespace = "default"
   }
 
@@ -192,8 +192,8 @@ variable "qdrant_port" {
   default     = "443"
 }
 
-resource "google_cloud_run_service" "qdrant" {
-  name     = "qdrant"
+resource "google_cloud_run_service" "zk-qdrant" {
+  name     = "zk-qdrant"
   location = var.region
 
   template {
@@ -215,7 +215,7 @@ resource "google_cloud_run_service" "qdrant" {
 }
 
 resource "google_cloud_run_service" "ragstack-server" {
-  name     = "ragstack-server"
+  name     = "zk-ragstack-server"
   location = var.region
 
   template {
@@ -231,7 +231,7 @@ resource "google_cloud_run_service" "ragstack-server" {
 
         env {
           name  = "QDRANT_URL"
-          value = google_cloud_run_service.qdrant.status[0].url
+          value = google_cloud_run_service.zk-qdrant.status[0].url
         }
 
         env {
@@ -263,8 +263,8 @@ module "gke-cluster" {
 }
 
 resource "google_cloud_run_service_iam_member" "public" {
-  service  = google_cloud_run_service.qdrant.name
-  location = google_cloud_run_service.qdrant.location
+  service  = google_cloud_run_service.zk-qdrant.name
+  location = google_cloud_run_service.zk-qdrant.location
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
